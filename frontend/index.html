@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — Utopia Labs</title>
+  <style>
+    :root {
+      --bg: #0a0b0f;
+      --surface: #13141b;
+      --border: #1f2230;
+      --text: #e4e7f0;
+      --text-dim: #8b92ab;
+      --accent: #667eea;
+      --accent-hover: #764ba2;
+      --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'SF Pro Display', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      max-width: 400px;
+      width: 100%;
+      padding: 2rem;
+    }
+    .logo {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .logo img {
+      height: 60px;
+      width: auto;
+    }
+    .card {
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 2.5rem;
+      border: 1px solid var(--border);
+    }
+    h1 {
+      font-size: 1.75rem;
+      margin-bottom: 0.5rem;
+      text-align: center;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    p {
+      text-align: center;
+      color: var(--text-dim);
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+    }
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    input {
+      width: 100%;
+      background: var(--bg);
+      border: 2px solid var(--border);
+      color: var(--text);
+      padding: 0.875rem 1rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border 0.2s;
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    button {
+      width: 100%;
+      background: var(--gradient);
+      color: white;
+      border: none;
+      padding: 1rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    button:hover:not(:disabled) {
+      opacity: 0.9;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .error {
+      background: rgba(255, 71, 87, 0.1);
+      border: 1px solid rgba(255, 71, 87, 0.3);
+      color: #ff4757;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+    }
+    .error.hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <img src="/static/logo.png" alt="Utopia Labs" onerror="this.style.display='none'">
+    </div>
+    <div class="card">
+      <h1>Bienvenido</h1>
+      <p>Inicia sesión para continuar</p>
+      
+      <div id="error" class="error hidden"></div>
+      
+      <form id="login-form">
+        <div class="form-group">
+          <label for="username">Usuario</label>
+          <input type="text" id="username" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="password">Contraseña</label>
+          <input type="password" id="password" required autocomplete="current-password">
+        </div>
+        <button type="submit" id="submit-btn">Iniciar sesión</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('login-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const errorDiv = document.getElementById('error');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorDiv.classList.add('hidden');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Iniciando sesión...';
+
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        if (response.ok) {
+          window.location.href = '/chat';
+        } else {
+          errorDiv.textContent = 'Usuario o contraseña incorrectos';
+          errorDiv.classList.remove('hidden');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Iniciar sesión';
+        }
+      } catch (error) {
+        errorDiv.textContent = 'Error de conexión. Intenta de nuevo.';
+        errorDiv.classList.remove('hidden');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Iniciar sesión';
+      }
+    });
+  </script>
+</body>
+</html>

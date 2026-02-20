@@ -1,0 +1,120 @@
+# 🚂 Bot de Telegram para RunPod - Railway.app
+
+Bot de Telegram que controla tu pod de RunPod desde cualquier lugar, **siempre activo** en Railway.app.
+
+## ✨ Características
+
+- ✅ Siempre activo 24/7 (incluso cuando el pod está apagado)
+- ✅ Gratuito (Railway.app ofrece $5/mes gratis)
+- ✅ Encender/apagar el pod remotamente
+- ✅ Consultar estado en tiempo real
+- ✅ Seguro (solo usuarios autorizados)
+
+## 🎯 Comandos del Bot
+
+- `/start` - Ver información y tu User ID
+- `/help` - Ayuda
+- `/encender` - Enciende el pod de RunPod
+- `/apagar` - Apaga el pod de RunPod
+- `/estado` - Consulta el estado actual
+
+## 🚀 Deploy en Railway.app (5 minutos)
+
+### 1️⃣ Crear cuenta en Railway
+
+1. Ve a [railway.app](https://railway.app/)
+2. Clic en **"Start a New Project"**
+3. Login con GitHub
+
+### 2️⃣ Deploy desde GitHub
+
+**Opción A: Desde este directorio**
+
+1. Sube esta carpeta `railway/` a un repositorio de GitHub
+2. En Railway: **"Deploy from GitHub repo"**
+3. Selecciona el repositorio
+
+**Opción B: Deploy manual**
+
+1. En Railway: **"Empty Project"**
+2. Clic en **"+ New"** → **"GitHub Repo"** → Conecta tu repo
+
+### 3️⃣ Configurar Variables de Entorno
+
+En Railway, ve a tu proyecto → **Variables** y agrega:
+
+```
+TELEGRAM_BOT_TOKEN=TU_TOKEN_DEL_BOT_AQUI
+TELEGRAM_USER_ID=TU_USER_ID_DE_TELEGRAM
+POD_ID=TU_POD_ID_DE_RUNPOD
+RUNPOD_API_KEY=TU_RUNPOD_API_KEY_AQUI
+```
+
+### 4️⃣ ¡Listo!
+
+Railway detectará automáticamente el `Procfile` y ejecutará el bot.
+
+## 📊 Verificar que Funciona
+
+1. Ve a **Deployments** en Railway
+2. Verifica que el estado sea **"Active"**
+3. Abre los **logs** para ver si el bot inició correctamente
+4. En Telegram, busca `@runpod_control_bot` y envía `/start`
+
+## 🔒 Seguridad
+
+- Solo los User IDs en `TELEGRAM_USER_ID` pueden usar el bot
+- Para agregar más usuarios: `TELEGRAM_USER_ID=123456,789012,345678`
+
+## 📝 Archivos
+
+- `telegram-bot.py` - Bot principal
+- `requirements.txt` - Dependencias Python
+- `Procfile` - Comando para Railway
+- `runtime.txt` - Versión de Python
+- `.gitignore` - Archivos a ignorar
+
+## 💰 Costo
+
+Railway ofrece:
+- ✅ **$5 de crédito gratis al mes**
+- ✅ Este bot consume ~$0.50/mes
+- ✅ Sobran $4.50 para otros proyectos
+
+## 🐛 Troubleshooting
+
+### El bot no responde
+
+1. Ve a Railway → Logs
+2. Verifica que diga: `✅ Bot iniciado correctamente`
+3. Revisa que las variables de entorno estén configuradas
+
+### "No estás autorizado"
+
+1. Envía `/start` al bot para ver tu User ID
+2. Verifica que tu User ID esté en `TELEGRAM_USER_ID` en Railway
+3. Reinicia el deploy en Railway
+
+### El pod no enciende
+
+1. Verifica `RUNPOD_API_KEY` en Railway
+2. Verifica `POD_ID` en Railway
+3. Revisa los logs de Railway para errores
+
+## 📚 Documentación
+
+- [Railway.app Docs](https://docs.railway.app/)
+- [python-telegram-bot Docs](https://docs.python-telegram-bot.org/)
+- [RunPod API Docs](https://docs.runpod.io/reference/graphql-api)
+
+## 🎉 Resultado Final
+
+Ahora puedes:
+- 🔌 Encender tu pod desde Telegram (incluso cuando está apagado)
+- 🛑 Apagar tu pod para ahorrar costos
+- 📊 Consultar estado en tiempo real
+- 🌍 Controlarlo desde cualquier lugar del mundo
+
+---
+
+**Creado para controlar RunPod desde Telegram de forma gratuita y siempre activa.**

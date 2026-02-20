@@ -1,0 +1,10 @@
+vllm
+fastapi
+uvicorn[standard]
+python-jose[cryptography]
+python-multipart
+bcrypt
+slowapi
+httpx
+ddgs
+python-dotenv
