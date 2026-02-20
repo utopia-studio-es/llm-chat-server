@@ -4,6 +4,7 @@ if [ -f .env ]; then
 fi
 
 MODEL_NAME=${MODEL_NAME:-"Qwen/Qwen2-VL-7B-Instruct"}
+export HF_HOME=/workspace/huggingface_cache
 API_KEY=${API_KEY:-"token-llm-chat-secret-2025"}
 
 echo "Iniciando vLLM con modelo: $MODEL_NAME"

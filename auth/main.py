@@ -4,7 +4,6 @@ import time
 import logging
 from pathlib import Path
 
-# Cargar .env
 _env_file = Path(__file__).resolve().parent.parent / ".env"
 if _env_file.exists():
     for line in _env_file.read_text(encoding="utf-8").splitlines():
@@ -14,7 +13,7 @@ if _env_file.exists():
             os.environ[k.strip()] = v.strip()
 
 from fastapi import FastAPI, Request, Response, HTTPException
-from fastapi.responses import RedirectResponse, FileResponse, StreamingResponse
+from fastapi.responses import RedirectResponse, FileResponse, StreamingResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jose import JWTError, jwt
 import bcrypt
@@ -30,8 +29,6 @@ VLLM_URL = os.environ.get("VLLM_URL", "http://127.0.0.1:8000")
 API_KEY = os.environ.get("API_KEY", "token-llm-chat-secret-2025")
 JWT_SECRET = os.environ.get("JWT_SECRET", API_KEY)
 JWT_EXPIRE_SECONDS = int(os.environ.get("JWT_EXPIRE_SECONDS", "86400"))
-COOKIE_NAME = "access_token"
-SECURE_COOKIE = os.environ.get("SECURE_COOKIE", "true").lower() in ("1", "true", "yes")
 LOGIN_USER = os.environ.get("LOGIN_USER", "admin")
 LOGIN_PASSWORD_PLAIN = os.environ.get("LOGIN_PASSWORD", "")
 _stored_hash = bcrypt.hashpw(LOGIN_PASSWORD_PLAIN.encode("utf-8"), bcrypt.gensalt()).decode("utf-8") if LOGIN_PASSWORD_PLAIN else None
@@ -55,6 +52,20 @@ def decode_token(token: str):
         return payload
     except JWTError:
         return None
+
+def get_token_from_request(request: Request):
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        token = auth[7:]
+        if decode_token(token):
+            return token
+    token = request.query_params.get("token", "")
+    if token and decode_token(token):
+        return token
+    token = request.cookies.get("access_token", "")
+    if token and decode_token(token):
+        return token
+    return None
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("auth")
@@ -86,15 +97,18 @@ async def login(request: Request):
     if not check_user(username, password):
         raise HTTPException(401, "Invalid credentials")
     token = create_token(username)
-    resp = Response(content=json.dumps({"message": "Login successful"}), media_type="application/json")
-    resp.set_cookie(key=COOKIE_NAME, value=token, httponly=True, secure=SECURE_COOKIE, samesite="lax")
-    return resp
+    return {"message": "Login successful", "token": token}
+
+@app.get("/api/verify")
+async def verify_token(request: Request):
+    token = get_token_from_request(request)
+    if token:
+        return {"valid": True}
+    raise HTTPException(401, "Invalid token")
 
 @app.get("/api/logout")
 async def logout():
-    resp = RedirectResponse(url="/login", status_code=302)
-    resp.delete_cookie(COOKIE_NAME)
-    return resp
+    return RedirectResponse(url="/", status_code=302)
 
 @app.get("/")
 @app.get("/login")
@@ -102,17 +116,8 @@ async def login_page():
     return FileResponse(FRONTEND_DIR / "index.html")
 
 @app.get("/chat")
-async def chat_redirect(request: Request):
-    token = request.cookies.get(COOKIE_NAME)
-    if not token or not decode_token(token):
-        return RedirectResponse(url="/login", status_code=302)
-    return FileResponse(FRONTEND_DIR / "chat.html")
-
 @app.get("/chat.html")
-async def chat_page(request: Request):
-    token = request.cookies.get(COOKIE_NAME)
-    if not token or not decode_token(token):
-        return RedirectResponse(url="/login", status_code=302)
+async def chat_page():
     return FileResponse(FRONTEND_DIR / "chat.html")
 
 async def handle_chat_with_smart_tools(body_json: dict, headers: dict, url: str, is_stream: bool):
@@ -137,7 +142,7 @@ async def handle_chat_with_smart_tools(body_json: dict, headers: dict, url: str,
         tool_result = await detect_and_execute_smart_tools(user_message)
         if tool_result:
             tool_name, result = tool_result
-            logger.info(f"🔧 Herramienta ejecutada: {tool_name}")
+            logger.info(f"Herramienta ejecutada: {tool_name}")
             messages = augment_message_with_tool_result(messages, tool_name, result)
             body_json["messages"] = messages
     
@@ -155,13 +160,13 @@ async def handle_chat_with_smart_tools(body_json: dict, headers: dict, url: str,
 
 @app.api_route("/v1/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 async def proxy_v1(request: Request, path: str):
-    token = request.cookies.get(COOKIE_NAME)
-    if not token or not decode_token(token):
+    token = get_token_from_request(request)
+    if not token:
         raise HTTPException(401, "No autorizado")
     
     url = f"{VLLM_URL}/v1/{path}"
     body = await request.body()
-    headers = {k: v for k, v in request.headers.items() if k.lower() not in ("host", "connection", "content-length")}
+    headers = {k: v for k, v in request.headers.items() if k.lower() not in ("host", "connection", "content-length", "authorization")}
     headers["Authorization"] = f"Bearer {API_KEY}"
     
     try:

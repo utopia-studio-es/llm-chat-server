@@ -1,120 +1,434 @@
-# 🚂 Bot de Telegram para RunPod - Railway.app
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat — Utopia Labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #08090d;
+      --surface: #111318;
+      --surface-2: #181a22;
+      --surface-hover: #1e2130;
+      --border: #252836;
+      --text: #eaecf5;
+      --text-dim: #6b7194;
+      --text-muted: #454a6b;
+      --accent: #667eea;
+      --accent-2: #764ba2;
+      --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --danger: #ef4444;
+      --success: #22c55e;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex;
+    }
 
-Bot de Telegram que controla tu pod de RunPod desde cualquier lugar, **siempre activo** en Railway.app.
+    /* ─── SIDEBAR ─── */
+    #sidebar {
+      width: 300px; min-width: 300px; background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; transition: all 0.3s;
+    }
+    #sidebar.hidden { display: none; }
+    #sidebar-logo {
+      padding: 1.5rem 1.25rem; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 0.75rem;
+    }
+    #sidebar-logo img { height: 36px; }
+    #sidebar-logo span {
+      font-weight: 700; font-size: 1.05rem;
+      background: var(--gradient); -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    #new-chat-btn {
+      margin: 1rem 1rem 0.5rem; padding: 0.8rem 1rem;
+      background: var(--gradient); color: white; border: none;
+      border-radius: var(--radius); cursor: pointer; font-weight: 600;
+      font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    #new-chat-btn:hover { opacity: 0.9; }
+    #new-chat-btn:active { transform: scale(0.98); }
+    #chats-list {
+      flex: 1; overflow-y: auto; padding: 0.5rem 0.75rem;
+      scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+    }
+    .chat-item {
+      padding: 0.7rem 0.85rem; border-radius: 10px; cursor: pointer;
+      margin-bottom: 2px; display: flex; justify-content: space-between;
+      align-items: center; transition: background 0.15s; font-size: 0.875rem;
+      color: var(--text-dim);
+    }
+    .chat-item:hover { background: var(--surface-hover); color: var(--text); }
+    .chat-item.active { background: var(--surface-hover); color: var(--text); border-left: 3px solid var(--accent); }
+    .chat-item-title {
+      flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .chat-item-delete {
+      opacity: 0; background: none; border: none; color: var(--danger);
+      cursor: pointer; padding: 0.2rem 0.4rem; border-radius: 6px;
+      font-size: 0.8rem; transition: all 0.15s;
+    }
+    .chat-item:hover .chat-item-delete { opacity: 0.7; }
+    .chat-item-delete:hover { opacity: 1 !important; background: rgba(239,68,68,0.15); }
 
-## ✨ Características
+    #sidebar-footer {
+      padding: 1rem 1.25rem; border-top: 1px solid var(--border);
+    }
+    #logout-btn {
+      width: 100%; padding: 0.65rem; background: transparent;
+      border: 1px solid var(--border); color: var(--text-dim);
+      border-radius: 10px; cursor: pointer; font-size: 0.85rem;
+      transition: all 0.15s; font-family: inherit;
+    }
+    #logout-btn:hover { background: var(--surface-hover); color: var(--text); border-color: var(--danger); }
 
-- ✅ Siempre activo 24/7 (incluso cuando el pod está apagado)
-- ✅ Gratuito (Railway.app ofrece $5/mes gratis)
-- ✅ Encender/apagar el pod remotamente
-- ✅ Consultar estado en tiempo real
-- ✅ Seguro (solo usuarios autorizados)
+    /* ─── MAIN ─── */
+    #main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    #topbar {
+      background: var(--surface); padding: 0.85rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 1rem;
+    }
+    #toggle-btn {
+      background: none; border: 1px solid var(--border); color: var(--text-dim);
+      padding: 0.4rem 0.55rem; border-radius: 8px; cursor: pointer;
+      font-size: 1.1rem; line-height: 1; display: none; transition: all 0.15s;
+    }
+    #toggle-btn:hover { color: var(--text); border-color: var(--accent); }
+    #topbar-title { font-weight: 600; font-size: 0.95rem; color: var(--text-dim); }
 
-## 🎯 Comandos del Bot
+    /* ─── MESSAGES ─── */
+    #messages {
+      flex: 1; overflow-y: auto; padding: 2rem 1.5rem;
+      scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+    }
+    #welcome {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; height: 100%; gap: 1rem; color: var(--text-muted);
+    }
+    #welcome img { height: 48px; opacity: 0.5; }
+    #welcome h2 {
+      font-size: 1.5rem; font-weight: 700;
+      background: var(--gradient); -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    #welcome p { font-size: 0.95rem; max-width: 400px; text-align: center; line-height: 1.6; }
 
-- `/start` - Ver información y tu User ID
-- `/help` - Ayuda
-- `/encender` - Enciende el pod de RunPod
-- `/apagar` - Apaga el pod de RunPod
-- `/estado` - Consulta el estado actual
+    .msg { max-width: 820px; margin: 0 auto 1.75rem; display: flex; gap: 1rem; }
+    .msg-avatar {
+      width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.75rem; letter-spacing: 0.3px;
+    }
+    .msg-user .msg-avatar { background: var(--gradient); color: white; }
+    .msg-assistant .msg-avatar {
+      background: var(--surface-2); color: var(--accent); border: 1.5px solid var(--border);
+    }
+    .msg-body { flex: 1; min-width: 0; }
+    .msg-name { font-size: 0.8rem; color: var(--text-dim); margin-bottom: 0.4rem; font-weight: 600; }
+    .msg-text { line-height: 1.75; white-space: pre-wrap; word-break: break-word; font-size: 0.95rem; }
+    .msg-images { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+    .msg-image {
+      max-width: 320px; max-height: 320px; border-radius: 10px;
+      border: 1px solid var(--border); cursor: pointer; transition: transform 0.2s;
+    }
+    .msg-image:hover { transform: scale(1.02); }
+    .typing-dot {
+      display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent); animation: blink 1.4s infinite both; margin-right: 4px;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%,80%,100%{opacity:.3} 40%{opacity:1} }
 
-## 🚀 Deploy en Railway.app (5 minutos)
+    /* ─── INPUT ─── */
+    #input-area {
+      background: var(--surface); border-top: 1px solid var(--border); padding: 1.25rem 1.5rem;
+    }
+    #input-box { max-width: 820px; margin: 0 auto; }
+    #img-preview {
+      display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;
+    }
+    .pv-item { position: relative; }
+    .pv-img {
+      width: 80px; height: 80px; object-fit: cover;
+      border-radius: 10px; border: 2px solid var(--border);
+    }
+    .pv-rm {
+      position: absolute; top: -6px; right: -6px; width: 22px; height: 22px;
+      border-radius: 50%; background: var(--danger); color: white; border: none;
+      cursor: pointer; font-size: 0.75rem; display: flex; align-items: center;
+      justify-content: center; transition: transform 0.15s;
+    }
+    .pv-rm:hover { transform: scale(1.15); }
+    #input-row { display: flex; gap: 0.5rem; align-items: flex-end; }
+    #attach {
+      background: var(--surface-2); border: 1px solid var(--border); color: var(--text-dim);
+      width: 44px; height: 44px; border-radius: 10px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.15rem; transition: all 0.15s; flex-shrink: 0;
+    }
+    #attach:hover { border-color: var(--accent); color: var(--text); }
+    #msg-input {
+      flex: 1; background: var(--surface-2); border: 1.5px solid var(--border);
+      color: var(--text); padding: 0.75rem 1rem; border-radius: 12px;
+      font-size: 0.95rem; resize: none; font-family: inherit;
+      max-height: 160px; line-height: 1.5; transition: border 0.2s;
+    }
+    #msg-input:focus { outline: none; border-color: var(--accent); }
+    #msg-input::placeholder { color: var(--text-muted); }
+    #send-btn {
+      background: var(--gradient); color: white; border: none;
+      width: 44px; height: 44px; border-radius: 10px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; transition: opacity 0.15s, transform 0.1s; flex-shrink: 0;
+    }
+    #send-btn:hover { opacity: 0.9; }
+    #send-btn:active { transform: scale(0.95); }
+    #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-### 1️⃣ Crear cuenta en Railway
+    @media (max-width: 768px) {
+      #sidebar { position: fixed; z-index: 100; height: 100vh; left: -300px; transition: left 0.3s; }
+      #sidebar.visible { left: 0; box-shadow: 0 0 40px rgba(0,0,0,0.6); }
+      #sidebar.hidden { display: flex; left: -300px; }
+      #toggle-btn { display: flex; }
+    }
+    input[type=file] { display: none; }
+  </style>
+</head>
+<body>
+  <input type="file" id="file-input" accept="image/*" multiple>
 
-1. Ve a [railway.app](https://railway.app/)
-2. Clic en **"Start a New Project"**
-3. Login con GitHub
+  <div id="sidebar">
+    <div id="sidebar-logo">
+      <img src="/static/logo.png" alt="Utopia Labs" onerror="this.style.display='none'">
+      <span>Utopia Labs</span>
+    </div>
+    <button id="new-chat-btn">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      Nueva conversación
+    </button>
+    <div id="chats-list"></div>
+    <div id="sidebar-footer">
+      <button id="logout-btn">Cerrar sesión</button>
+    </div>
+  </div>
 
-### 2️⃣ Deploy desde GitHub
+  <div id="main">
+    <div id="topbar">
+      <button id="toggle-btn">☰</button>
+      <div id="topbar-title">Qwen2-VL-7B</div>
+    </div>
+    <div id="messages">
+      <div id="welcome">
+        <img src="/static/logo.png" alt="" onerror="this.style.display='none'">
+        <h2>Hola, ¿en qué puedo ayudarte?</h2>
+        <p>Modelo multimodal con visión, búsqueda web y respuestas en tiempo real.</p>
+      </div>
+    </div>
+    <div id="input-area">
+      <div id="input-box">
+        <div id="img-preview"></div>
+        <div id="input-row">
+          <button id="attach" title="Adjuntar imagen">📎</button>
+          <textarea id="msg-input" placeholder="Escribe un mensaje..." rows="1"></textarea>
+          <button id="send-btn" title="Enviar">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-**Opción A: Desde este directorio**
+  <script>
+    const TOKEN = localStorage.getItem('auth_token');
+    if (!TOKEN) window.location.href = '/';
 
-1. Sube esta carpeta `railway/` a un repositorio de GitHub
-2. En Railway: **"Deploy from GitHub repo"**
-3. Selecciona el repositorio
+    const STATE = {
+      chats: JSON.parse(localStorage.getItem('chats') || '[]'),
+      currentChatId: localStorage.getItem('currentChatId') || null,
+      sending: false,
+      images: []
+    };
+    function save() {
+      localStorage.setItem('chats', JSON.stringify(STATE.chats));
+      localStorage.setItem('currentChatId', STATE.currentChatId || '');
+    }
+    function current() { return STATE.chats.find(c => c.id === STATE.currentChatId); }
+    function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2); }
 
-**Opción B: Deploy manual**
+    function newChat() {
+      const c = { id: uid(), title: 'Nueva conversación', messages: [], ts: Date.now() };
+      STATE.chats.unshift(c);
+      STATE.currentChatId = c.id;
+      STATE.images = [];
+      save(); renderSidebar(); renderMessages(); renderPreview();
+      document.getElementById('msg-input').focus();
+      closeMobileSidebar();
+    }
 
-1. En Railway: **"Empty Project"**
-2. Clic en **"+ New"** → **"GitHub Repo"** → Conecta tu repo
+    function selectChat(id) {
+      STATE.currentChatId = id;
+      STATE.images = [];
+      save(); renderSidebar(); renderMessages(); renderPreview();
+      closeMobileSidebar();
+    }
 
-### 3️⃣ Configurar Variables de Entorno
+    function deleteChat(id, ev) {
+      ev.stopPropagation();
+      STATE.chats = STATE.chats.filter(c => c.id !== id);
+      if (STATE.currentChatId === id) STATE.currentChatId = STATE.chats[0]?.id || null;
+      save(); renderSidebar(); renderMessages();
+    }
 
-En Railway, ve a tu proyecto → **Variables** y agrega:
+    function closeMobileSidebar() {
+      if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('visible');
+    }
 
-```
-TELEGRAM_BOT_TOKEN=TU_TOKEN_DEL_BOT_AQUI
-TELEGRAM_USER_ID=TU_USER_ID_DE_TELEGRAM
-POD_ID=TU_POD_ID_DE_RUNPOD
-RUNPOD_API_KEY=TU_RUNPOD_API_KEY_AQUI
-```
+    function renderSidebar() {
+      document.getElementById('chats-list').innerHTML = STATE.chats.map(c => `
+        <div class="chat-item ${c.id === STATE.currentChatId ? 'active' : ''}" onclick="selectChat('${c.id}')">
+          <span class="chat-item-title">${esc(c.title)}</span>
+          <button class="chat-item-delete" onclick="deleteChat('${c.id}', event)" title="Eliminar">🗑</button>
+        </div>
+      `).join('');
+    }
 
-### 4️⃣ ¡Listo!
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
-Railway detectará automáticamente el `Procfile` y ejecutará el bot.
+    function renderMessages() {
+      const div = document.getElementById('messages');
+      const chat = current();
+      if (!chat || chat.messages.length === 0) {
+        document.getElementById('welcome').style.display = 'flex';
+        div.querySelectorAll('.msg').forEach(m => m.remove());
+        return;
+      }
+      document.getElementById('welcome').style.display = 'none';
+      let html = '';
+      for (const m of chat.messages) {
+        const imgs = (m.images || []).map(i => `<img class="msg-image" src="${i}">`).join('');
+        const isTyping = m.role === 'assistant' && m.content === '' && STATE.sending;
+        const content = isTyping
+          ? '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>'
+          : esc(m.content);
+        html += `<div class="msg msg-${m.role}">
+          <div class="msg-avatar">${m.role === 'user' ? 'TÚ' : 'AI'}</div>
+          <div class="msg-body">
+            <div class="msg-name">${m.role === 'user' ? 'Tú' : 'Asistente'}</div>
+            ${imgs ? `<div class="msg-images">${imgs}</div>` : ''}
+            <div class="msg-text">${content}</div>
+          </div>
+        </div>`;
+      }
+      div.innerHTML = `<div id="welcome" style="display:none"></div>` + html;
+      div.scrollTop = div.scrollHeight;
+    }
 
-## 📊 Verificar que Funciona
+    function renderPreview() {
+      document.getElementById('img-preview').innerHTML = STATE.images.map((img, i) => `
+        <div class="pv-item">
+          <img class="pv-img" src="${img}">
+          <button class="pv-rm" onclick="STATE.images.splice(${i},1);renderPreview()">✕</button>
+        </div>
+      `).join('');
+    }
 
-1. Ve a **Deployments** en Railway
-2. Verifica que el estado sea **"Active"**
-3. Abre los **logs** para ver si el bot inició correctamente
-4. En Telegram, busca `@runpod_control_bot` y envía `/start`
+    async function send() {
+      const text = document.getElementById('msg-input').value.trim();
+      if ((!text && STATE.images.length === 0) || STATE.sending) return;
+      if (!STATE.currentChatId) newChat();
+      const chat = current();
+      if (!chat) return;
 
-## 🔒 Seguridad
+      const images = [...STATE.images];
+      document.getElementById('msg-input').value = '';
+      STATE.images = [];
+      renderPreview();
 
-- Solo los User IDs en `TELEGRAM_USER_ID` pueden usar el bot
-- Para agregar más usuarios: `TELEGRAM_USER_ID=123456,789012,345678`
+      chat.messages.push({ role: 'user', content: text, images });
+      STATE.sending = true;
+      document.getElementById('send-btn').disabled = true;
+      const aMsg = { role: 'assistant', content: '', images: [] };
+      chat.messages.push(aMsg);
+      renderMessages(); save();
 
-## 📝 Archivos
+      try {
+        const apiMsgs = chat.messages.slice(0, -1).map(m => ({
+          role: m.role,
+          content: m.images?.length > 0
+            ? [{ type: 'text', text: m.content }, ...m.images.map(img => ({ type: 'image_url', image_url: { url: img } }))]
+            : m.content
+        }));
 
-- `telegram-bot.py` - Bot principal
-- `requirements.txt` - Dependencias Python
-- `Procfile` - Comando para Railway
-- `runtime.txt` - Versión de Python
-- `.gitignore` - Archivos a ignorar
+        const res = await fetch('/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN },
+          body: JSON.stringify({ model: 'Qwen/Qwen2-VL-7B-Instruct', messages: apiMsgs, stream: true, max_tokens: 2048, temperature: 0.7 })
+        });
 
-## 💰 Costo
+        if (res.status === 401) { localStorage.removeItem('auth_token'); window.location.href = '/'; return; }
 
-Railway ofrece:
-- ✅ **$5 de crédito gratis al mes**
-- ✅ Este bot consume ~$0.50/mes
-- ✅ Sobran $4.50 para otros proyectos
+        const reader = res.body.getReader();
+        const dec = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          for (const line of dec.decode(value).split('\n')) {
+            if (!line.startsWith('data: ')) continue;
+            const d = line.slice(6);
+            if (d === '[DONE]') break;
+            try { aMsg.content += JSON.parse(d).choices[0]?.delta?.content || ''; renderMessages(); } catch {}
+          }
+        }
 
-## 🐛 Troubleshooting
+        if (chat.messages.length === 2 && text) {
+          chat.title = text.slice(0, 45) + (text.length > 45 ? '…' : '');
+          renderSidebar();
+        }
+      } catch (e) {
+        aMsg.content = 'Error: ' + e.message;
+        renderMessages();
+      }
 
-### El bot no responde
+      STATE.sending = false;
+      document.getElementById('send-btn').disabled = false;
+      save();
+    }
 
-1. Ve a Railway → Logs
-2. Verifica que diga: `✅ Bot iniciado correctamente`
-3. Revisa que las variables de entorno estén configuradas
+    function addImages(files) {
+      Array.from(files).forEach(f => {
+        const r = new FileReader();
+        r.onload = e => { STATE.images.push(e.target.result); renderPreview(); };
+        r.readAsDataURL(f);
+      });
+    }
 
-### "No estás autorizado"
+    document.getElementById('new-chat-btn').addEventListener('click', newChat);
+    document.getElementById('send-btn').addEventListener('click', send);
+    document.getElementById('msg-input').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
+    document.getElementById('attach').addEventListener('click', () => document.getElementById('file-input').click());
+    document.getElementById('file-input').addEventListener('change', e => { addImages(e.target.files); e.target.value = ''; });
+    document.addEventListener('paste', e => {
+      const imgs = [];
+      for (const item of (e.clipboardData?.items || [])) if (item.type.startsWith('image/')) imgs.push(item.getAsFile());
+      if (imgs.length) addImages(imgs);
+    });
+    document.getElementById('logout-btn').addEventListener('click', () => { localStorage.removeItem('auth_token'); window.location.href = '/'; });
+    document.getElementById('toggle-btn').addEventListener('click', () => document.getElementById('sidebar').classList.toggle('visible'));
 
-1. Envía `/start` al bot para ver tu User ID
-2. Verifica que tu User ID esté en `TELEGRAM_USER_ID` en Railway
-3. Reinicia el deploy en Railway
+    const ta = document.getElementById('msg-input');
+    ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 160) + 'px'; });
 
-### El pod no enciende
-
-1. Verifica `RUNPOD_API_KEY` en Railway
-2. Verifica `POD_ID` en Railway
-3. Revisa los logs de Railway para errores
-
-## 📚 Documentación
-
-- [Railway.app Docs](https://docs.railway.app/)
-- [python-telegram-bot Docs](https://docs.python-telegram-bot.org/)
-- [RunPod API Docs](https://docs.runpod.io/reference/graphql-api)
-
-## 🎉 Resultado Final
-
-Ahora puedes:
-- 🔌 Encender tu pod desde Telegram (incluso cuando está apagado)
-- 🛑 Apagar tu pod para ahorrar costos
-- 📊 Consultar estado en tiempo real
-- 🌍 Controlarlo desde cualquier lugar del mundo
-
----
-
-**Creado para controlar RunPod desde Telegram de forma gratuita y siempre activa.**
+    if (STATE.chats.length === 0) newChat();
+    else { renderSidebar(); renderMessages(); }
+  </script>
+</body>
+</html>
